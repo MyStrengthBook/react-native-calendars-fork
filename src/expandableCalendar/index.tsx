@@ -105,6 +105,8 @@ export interface ExpandableCalendarProps extends CalendarListProps {
    * not for `markingType='period'` or a custom `dayComponent`. Default = false
    */
   enableDayDrag?: boolean;
+  /** Delay in ms before a long-press activates the drag, once `enableDayDrag` is set. Default = 100 */
+  dragActivationDelay?: number;
   /** Fires once the long-press is recognized and the drag begins, with the dragged day */
   onDayDragStart?: (date: DateData) => void;
   /**
@@ -154,6 +156,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     closeThreshold = PAN_GESTURE_THRESHOLD,
     closeOnDayPress = true,
     enableDayDrag = false,
+    dragActivationDelay,
     onDayDragStart,
     onDayDragEnd,
 
@@ -754,6 +757,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     }
     return {
       enableDayDrag: true,
+      dragActivationDelay,
       onDragStart: isDragLayoutReady ? handleDayDragStart : undefined,
       onDragMove: isDragLayoutReady ? handleDayDragMove : undefined,
       onDragEnd: isDragLayoutReady ? handleDayDragEnd : undefined,
@@ -762,6 +766,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     };
   }, [
     enableDayDrag,
+    dragActivationDelay,
     isOpen,
     isDragLayoutReady,
     handleDayDragStart,
@@ -777,6 +782,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     }
     return {
       enableDayDrag: true,
+      dragActivationDelay,
       onDragStart: isDragLayoutReady ? handleDayDragStart : undefined,
       onDragMove: isDragLayoutReady ? handleDayDragMove : undefined,
       onDragEnd: isDragLayoutReady ? handleDayDragEnd : undefined,
@@ -785,6 +791,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     };
   }, [
     enableDayDrag,
+    dragActivationDelay,
     isOpen,
     isDragLayoutReady,
     handleDayDragStart,

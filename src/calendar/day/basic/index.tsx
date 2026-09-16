@@ -18,7 +18,7 @@ export type DayLayoutRect = {
   height: number;
 };
 
-const LONG_PRESS_DELAY = 100;
+const DEFAULT_DRAG_ACTIVATION_DELAY = 100;
 const MOVE_THRESHOLD = 10;
 
 export interface BasicDayProps extends ViewProps {
@@ -47,6 +47,8 @@ export interface BasicDayProps extends ViewProps {
   accessibilityLabel?: string;
   /** Enable long-press then drag between days */
   enableDayDrag?: boolean;
+  /** Delay in ms before a long-press activates the drag, once `enableDayDrag` is set. Default = 100 */
+  dragActivationDelay?: number;
   /** Date string currently under the drag finger (for hover highlight) */
   dragHoverDate?: string;
   /** Called when a long-press drag starts on this day */
@@ -76,6 +78,7 @@ const BasicDay = (props: BasicDayProps) => {
     children,
     testID,
     enableDayDrag,
+    dragActivationDelay = DEFAULT_DRAG_ACTIVATION_DELAY,
     dragHoverDate,
     onDragStart,
     onDragMove,
@@ -297,9 +300,9 @@ const BasicDay = (props: BasicDayProps) => {
         if (!didMoveBeyondThreshold.current) {
           startDrag(toWindowPoint(pageX, pageY));
         }
-      }, LONG_PRESS_DELAY);
+      }, dragActivationDelay);
     },
-    [enableDayDrag, disabled, clearLongPressTimer, startDrag, toWindowPoint]
+    [enableDayDrag, disabled, clearLongPressTimer, startDrag, toWindowPoint, dragActivationDelay]
   );
 
   const onTouchMove = useCallback(

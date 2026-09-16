@@ -78,6 +78,12 @@
       "default": "false"
     },
     {
+      "name": "dragActivationDelay",
+      "type": "number",
+      "description": "Delay in ms before a long-press activates the drag, once `enableDayDrag` is set. Default = 100",
+      "default": "100"
+    },
+    {
       "name": "onDayDragStart",
       "type": "(date: DateData) => void",
       "description": "Called once the long-press is recognized and the drag begins, with the dragged day"

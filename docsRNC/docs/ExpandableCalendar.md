@@ -71,6 +71,11 @@ Whether to close the calendar on day press
 Enable long-press-then-drag of a day onto another day, in both the open (month) and closed (week) positions. Works only for the default day rendering (not for markingType='period' or a custom dayComponent). Default = false  
 <span style={{color: 'grey'}}>boolean</span>
 
+### dragActivationDelay
+
+Delay in ms before a long-press activates the drag, once `enableDayDrag` is set. Default = 100  
+<span style={{color: 'grey'}}>number</span>
+
 ### onDayDragStart
 
 Called once the long-press is recognized and the drag begins, with the dragged day  
