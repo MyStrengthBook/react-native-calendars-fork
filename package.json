@@ -21,7 +21,8 @@
     "android": "react-native run-android",
     "xcode": "open ios/CalendarsExample.xcworkspace/",
     "clean": "rm package-lock.json && rm -rf ./node_modules && npm i",
-    "pod-install": "pod install --project-directory=ios"
+    "pod-install": "pod install --project-directory=ios",
+    "postinstall": "patch-package"
   },
   "repository": {
     "type": "git",
@@ -69,6 +70,7 @@
     "lint-staged": "^10.2.11",
     "metro-react-native-babel-preset": "^0.66.2",
     "mocha": "^7.1.0",
+    "patch-package": "^8.0.1",
     "prettier": "^2.0.5",
     "react": "17.0.2",
     "react-component-driver": "^0.10.0",
