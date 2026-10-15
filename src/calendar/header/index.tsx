@@ -60,6 +60,8 @@ export interface CalendarHeaderProps {
   renderHeader?: (date?: XDate) => ReactNode; //TODO: replace with string
   /** Replace default title with custom element */
   customHeaderTitle?: JSX.Element;
+  /** Element rendered under the month title row, above the day names */
+  customHeaderSubtitle?: ReactNode;
 
   /** Provide aria-level for calendar heading for proper accessibility when used with web (react-native-web) */
   webAriaLevel?: number;
@@ -100,6 +102,7 @@ const CalendarHeader = forwardRef((props: CalendarHeaderProps, ref) => {
     disabledDaysIndexes,
     displayLoadingIndicator,
     customHeaderTitle,
+    customHeaderSubtitle,
     renderHeader,
     webAriaLevel,
     testID,
@@ -294,6 +297,7 @@ const CalendarHeader = forwardRef((props: CalendarHeaderProps, ref) => {
         </View>
         {_renderArrow('right')}
       </View>
+      {customHeaderSubtitle}
       {renderDayNames()}
     </View>
   );

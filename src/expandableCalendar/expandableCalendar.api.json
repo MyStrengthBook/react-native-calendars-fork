@@ -97,6 +97,21 @@
       "name": "onDayDragFinish",
       "type": "() => void",
       "description": "Called whenever a drag stops, whether or not it was dropped on a different day. Fires before onDayDragEnd"
+    },
+    {
+      "name": "renderHeaderSubtitle",
+      "type": "(info: HeaderSubtitleInfo) => ReactNode",
+      "description": "Render content under the month label, above the day names (horizontal only). Receives { date, isToday, goToToday }; goToToday selects today and fires onDateChanged with updateSource 'todayPress'. Return null to render nothing. Requires headerSubtitleHeight"
+    },
+    {
+      "name": "headerSubtitleHeight",
+      "type": "number",
+      "description": "Height of the renderHeaderSubtitle row. The calendar's open/closed heights grow by exactly this much while content is rendered"
+    },
+    {
+      "name": "compactHeader",
+      "type": "boolean",
+      "description": "Less spacing above the month label (horizontal only). Default = false"
     }
   ]
 }

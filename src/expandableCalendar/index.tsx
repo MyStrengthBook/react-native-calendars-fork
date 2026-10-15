@@ -6,6 +6,7 @@ import throttle from "lodash/throttle";
 import XDate from "xdate";
 
 import React, {
+  ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -28,6 +29,7 @@ import {
 
 import Calendar from "../calendar";
 import CalendarList, { CalendarListProps } from "../calendar-list";
+import headerStyleConstructor from "../calendar/header/style";
 import { DayDragPoint, DayLayoutRect } from "../calendar/day/basic";
 import WeekDaysNames from "../commons/WeekDaysNames";
 import { page } from "../dateutils";
@@ -36,6 +38,7 @@ import { parseDate, toMarkingFormat, xdateToData } from "../interface";
 import { CALENDAR_KNOB } from "../testIDs";
 import { DateData, Direction } from "../types";
 import Context from "./Context";
+import { getTodayDate } from "./Context/Presenter";
 import DragGhostOverlay, {
   DragGhostOverlayHandle,
   GHOST_HALF_SIZE,
@@ -64,10 +67,23 @@ const BOUNCINESS = 6;
 const CLOSED_HEIGHT = 120; // header + 1 week
 const WEEK_HEIGHT = 46;
 const DAY_NAMES_PADDING = 24;
+/** compactHeader: month header top margin 6 -> 0 and month label top margin 10 -> 4 */
+const COMPACT_HEADER_MARGIN_TOP = 0;
+const COMPACT_MONTH_TEXT_MARGIN_TOP = 4;
+const COMPACT_HEADER_TRIM = 12;
 const PAN_GESTURE_THRESHOLD = 30;
 const LEFT_ARROW = require("../calendar/img/previous.png");
 const RIGHT_ARROW = require("../calendar/img/next.png");
 const knobHitSlop = { left: 10, right: 10, top: 10, bottom: 10 };
+
+export type HeaderSubtitleInfo = {
+  /** The selected date (yyyy-MM-dd) */
+  date: string;
+  /** Whether the selected date is today */
+  isToday: boolean;
+  /** Selects today, firing onDateChanged with updateSource 'todayPress' */
+  goToToday: () => void;
+};
 
 export type DayDragEndData = {
   /** The day the drag started from */
@@ -116,6 +132,15 @@ export interface ExpandableCalendarProps extends CalendarListProps {
   onDayDragEnd?: (data: DayDragEndData) => void;
   /** Fires whenever a drag stops, whether or not it was dropped on a different day. Called before `onDayDragEnd` */
   onDayDragFinish?: () => void;
+  /**
+   * Render content under the month label, above the day names (horizontal only).
+   * Return null/undefined to render nothing. Requires `headerSubtitleHeight`.
+   */
+  renderHeaderSubtitle?: (info: HeaderSubtitleInfo) => ReactNode;
+  /** Height of the `renderHeaderSubtitle` row. The calendar's open/closed heights grow by exactly this much */
+  headerSubtitleHeight?: number;
+  /** Less spacing above the month label (horizontal only). Default = false */
+  compactHeader?: boolean;
 }
 
 const headerStyleOverride = {
@@ -162,6 +187,9 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     onDayDragStart,
     onDayDragEnd,
     onDayDragFinish,
+    renderHeaderSubtitle,
+    headerSubtitleHeight = 0,
+    compactHeader = false,
 
     /** CalendarList props */
     horizontal = true,
@@ -247,22 +275,46 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
   const isOpen = position === Positions.OPEN;
   isOpenRef.current = isOpen;
 
+  const goToToday = useCallback(() => {
+    setDate?.(getTodayDate(), updateSources.TODAY_PRESS);
+  }, [setDate]);
+
+  const headerSubtitleContent = horizontal
+    ? renderHeaderSubtitle?.({
+        date,
+        isToday: date === getTodayDate(),
+        goToToday,
+      })
+    : undefined;
+  const hasHeaderSubtitle =
+    headerSubtitleContent !== null && headerSubtitleContent !== undefined;
+
+  /** Header height change vs. the default: subtitle row added, compactHeader spacing removed */
+  const isCompactHeader = compactHeader && horizontal;
+  const headerHeightDelta =
+    (hasHeaderSubtitle ? headerSubtitleHeight : 0) -
+    (isCompactHeader ? COMPACT_HEADER_TRIM : 0);
+  const headerHeightDeltaRef = useRef(headerHeightDelta);
+  headerHeightDeltaRef.current = headerHeightDelta;
+
   const getOpenHeight = () => {
     if (!horizontal) {
       return Math.max(constants.screenHeight, constants.screenWidth);
     }
     return (
       CLOSED_HEIGHT +
+      headerHeightDeltaRef.current +
       WEEK_HEIGHT * (numberOfWeeks.current - 1) +
       (hideKnob ? 12 : KNOB_CONTAINER_HEIGHT) +
       (constants.isAndroid ? 3 : 0)
     );
   };
   const openHeight = useRef(getOpenHeight());
-  const closedHeight = useRef(
+  const getClosedHeight = () =>
     CLOSED_HEIGHT +
-      (hideKnob || Number(numberOfDays) > 1 ? 0 : KNOB_CONTAINER_HEIGHT)
-  );
+    headerHeightDeltaRef.current +
+    (hideKnob || Number(numberOfDays) > 1 ? 0 : KNOB_CONTAINER_HEIGHT);
+  const closedHeight = useRef(getClosedHeight());
 
   const startHeight = isOpen ? openHeight.current : closedHeight.current;
   const _height = useRef(startHeight);
@@ -281,6 +333,24 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
 
   const style = useRef(styleConstructor(theme));
   const themeObject = Object.assign(headerStyleOverride, theme);
+  const calendarListTheme = useMemo(() => {
+    if (!isCompactHeader) {
+      return themeObject;
+    }
+    const headerStyle = headerStyleConstructor(themeObject);
+    return {
+      ...themeObject,
+      "stylesheet.calendar.header": {
+        // @ts-expect-error
+        ...themeObject["stylesheet.calendar.header"],
+        header: { ...headerStyle.header, marginTop: COMPACT_HEADER_MARGIN_TOP },
+        monthText: {
+          ...headerStyle.monthText,
+          marginTop: COMPACT_MONTH_TEXT_MARGIN_TOP,
+        },
+      },
+    };
+  }, [isCompactHeader, theme]);
 
   const _wrapperStyles = useRef({ style: { height: startHeight } });
   const _headerStyles = { style: { top: isOpen ? -HEADER_HEIGHT : 0 } };
@@ -325,9 +395,12 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
   const weekCalendarStyle = useMemo(() => {
     return [
       style.current.weekContainer,
+      headerHeightDelta
+        ? { top: Number(style.current.weekContainer.top) + headerHeightDelta }
+        : undefined,
       isOpen ? style.current.hidden : style.current.visible,
     ];
-  }, [isOpen]);
+  }, [isOpen, headerHeightDelta]);
 
   const containerStyle = useMemo(() => {
     return [allowShadow && style.current.containerShadow, propsStyle];
@@ -356,6 +429,21 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     // date was changed from AgendaList, arrows or scroll
     scrollToDate(date);
   }, [date]);
+
+  // The header height changed (e.g. subtitle shown/hidden): resize to the same position's new height
+  const prevHeaderHeightDelta = useRef(headerHeightDelta);
+  useEffect(() => {
+    if (prevHeaderHeightDelta.current === headerHeightDelta) {
+      return;
+    }
+    prevHeaderHeightDelta.current = headerHeightDelta;
+    openHeight.current = getOpenHeight();
+    closedHeight.current = getClosedHeight();
+    _height.current = isOpenRef.current
+      ? openHeight.current
+      : closedHeight.current;
+    deltaY.current.setValue(_height.current);
+  }, [headerHeightDelta]);
 
   const handleScreenReaderStatus = (screenReaderEnabled: any) => {
     setScreenReaderEnabled(screenReaderEnabled);
@@ -1046,6 +1134,11 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     );
   };
 
+  // Fixed-height row: the open/closed heights account for exactly headerSubtitleHeight
+  const headerSubtitle = hasHeaderSubtitle ? (
+    <View style={{ height: headerSubtitleHeight }}>{headerSubtitleContent}</View>
+  ) : undefined;
+
   const renderWeekCalendar = () => {
     const WeekComponent = disableWeekScroll ? Week : WeekCalendar;
 
@@ -1084,7 +1177,9 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
 
   const renderCalendarList = () => {
     return (
-      <View pointerEvents={isOpen ? "auto" : "none"} collapsable={false}>
+      // Closed: still let touches reach the static header (arrows, subtitle). The month
+      // body is inert anyway: no onDayPress/drag handlers, scroll disabled, week layer on top
+      <View pointerEvents={isOpen ? "auto" : "box-none"} collapsable={false}>
         <CalendarList
           testID="calendar"
           horizontal={horizontal}
@@ -1092,8 +1187,9 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
           calendarStyle={calendarStyle}
           {...others}
           {...monthDragProps}
+          customHeaderSubtitle={headerSubtitle}
           current={date}
-          theme={themeObject}
+          theme={calendarListTheme}
           ref={calendarList}
           onDayPress={isOpen ? _onDayPress : undefined}
           onVisibleMonthsChange={onVisibleMonthsChange}
