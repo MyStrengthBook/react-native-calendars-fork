@@ -92,6 +92,11 @@
       "name": "onDayDragEnd",
       "type": "(data: DayDragEndData) => void",
       "description": "Called when a day is dropped on a different day, with `data.from` and `data.to` (both DateData). Callback only - the component does not mutate markedDates or selection; update your own state here"
+    },
+    {
+      "name": "onDayDragFinish",
+      "type": "() => void",
+      "description": "Called whenever a drag stops, whether or not it was dropped on a different day. Fires before onDayDragEnd"
     }
   ]
 }

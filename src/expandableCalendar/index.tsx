@@ -114,6 +114,8 @@ export interface ExpandableCalendarProps extends CalendarListProps {
    * not change `markedDates` or selection - update your own state from here.
    */
   onDayDragEnd?: (data: DayDragEndData) => void;
+  /** Fires whenever a drag stops, whether or not it was dropped on a different day. Called before `onDayDragEnd` */
+  onDayDragFinish?: () => void;
 }
 
 const headerStyleOverride = {
@@ -159,6 +161,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     dragActivationDelay,
     onDayDragStart,
     onDayDragEnd,
+    onDayDragFinish,
 
     /** CalendarList props */
     horizontal = true,
@@ -742,11 +745,12 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     hoverRef.current?.clear();
     setIsDragging(false);
     setDragFrom(undefined);
+    onDayDragFinish?.();
 
     if (toDateString && toDateString !== from.dateString) {
       onDayDragEnd?.({ from, to: xdateToData(toDateString) });
     }
-  }, [onDayDragEnd, hitTestDay]);
+  }, [onDayDragEnd, onDayDragFinish, hitTestDay]);
 
   // Only the interactive layer may start/participate in drags. The inactive layer
   // stays mounted underneath/over and would otherwise steal touches.
