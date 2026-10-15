@@ -94,6 +94,13 @@ const BasicDay = (props: BasicDayProps) => {
   const touchStartRef = useRef<DayDragPoint | null>(null);
   const didMoveBeyondThreshold = useRef(false);
   /**
+   * Identifier of the finger that started the current gesture, null when idle.
+   * On Android every pointer of a multi-touch gesture is dispatched to the view the
+   * first finger hit, so extra fingers re-fire onTouchStart/onTouchEnd on this cell
+   * and must be ignored (see sc-46558).
+   */
+  const activeTouchIdRef = useRef<string | number | null>(null);
+  /**
    * Delta between `measureInWindow` space and touch (`pageX/pageY`) space.
    * On Android these disagree by the status-bar height; drag overlays and
    * hit-testing work in `measureInWindow` space, so touch points are corrected
@@ -272,7 +279,17 @@ const BasicDay = (props: BasicDayProps) => {
       if (!enableDayDrag || disabled) {
         return;
       }
-      const {pageX, pageY, locationX, locationY} = evt.nativeEvent;
+      if (activeTouchIdRef.current !== null) {
+        // Extra finger: keep an active drag going, but a second finger before
+        // activation means this isn't a tap or a drag.
+        if (!isDraggingRef.current) {
+          didMoveBeyondThreshold.current = true;
+          clearLongPressTimer();
+        }
+        return;
+      }
+      const {pageX, pageY, locationX, locationY, identifier} = evt.nativeEvent;
+      activeTouchIdRef.current = identifier;
       touchStartRef.current = {pageX, pageY};
       didMoveBeyondThreshold.current = false;
       isDraggingRef.current = false;
@@ -307,10 +324,12 @@ const BasicDay = (props: BasicDayProps) => {
 
   const onTouchMove = useCallback(
     (evt: GestureResponderEvent) => {
-      if (!enableDayDrag || disabled) {
+      if (!enableDayDrag || disabled || activeTouchIdRef.current === null) {
         return;
       }
-      const {pageX, pageY, locationX, locationY} = evt.nativeEvent;
+      // Follow only the finger that started the gesture
+      const touch = evt.nativeEvent.touches?.find(t => t.identifier === activeTouchIdRef.current) ?? evt.nativeEvent;
+      const {pageX, pageY, locationX, locationY} = touch;
       // Move events reliably localize `locationX/Y` to the target: derive the definitive
       // page -> measureInWindow correction from the first one.
       if (
@@ -341,10 +360,15 @@ const BasicDay = (props: BasicDayProps) => {
     [enableDayDrag, disabled, onDragMove, clearLongPressTimer, toWindowPoint]
   );
 
-  const onTouchEnd = useCallback(() => {
-    if (!enableDayDrag || disabled) {
+  const onTouchEnd = useCallback((evt: GestureResponderEvent) => {
+    if (!enableDayDrag || disabled || activeTouchIdRef.current === null) {
       return;
     }
+    // An extra finger lifted while the original one is still down
+    if (evt.nativeEvent.touches?.some(t => t.identifier === activeTouchIdRef.current)) {
+      return;
+    }
+    activeTouchIdRef.current = null;
     clearLongPressTimer();
     if (isDraggingRef.current) {
       finishDrag();
@@ -359,6 +383,7 @@ const BasicDay = (props: BasicDayProps) => {
     if (!enableDayDrag || disabled) {
       return;
     }
+    activeTouchIdRef.current = null;
     clearLongPressTimer();
     finishDrag();
   }, [enableDayDrag, disabled, clearLongPressTimer, finishDrag]);
