@@ -55,6 +55,7 @@ export interface Theme {
   todayButtonFontWeight?: TextStyle['fontWeight'];
   todayButtonFontSize?: number;
   textDayStyle?: TextStyle;
+  textDayHeaderStyle?: TextStyle;
   dotStyle?: object;
   arrowStyle?: ViewStyle;
   todayBackgroundColor?: string;
