@@ -26,6 +26,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import Calendar from "../calendar";
 import CalendarList, { CalendarListProps } from "../calendar-list";
@@ -76,6 +77,21 @@ const LEFT_ARROW = require("../calendar/img/previous.png");
 const RIGHT_ARROW = require("../calendar/img/next.png");
 const knobHitSlop = { left: 10, right: 10, top: 10, bottom: 10 };
 
+const MaybeGestureDetector = ({
+  enabled,
+  gesture,
+  children,
+}: {
+  enabled: boolean;
+  gesture: React.ComponentProps<typeof GestureDetector>["gesture"];
+  children: React.ReactElement;
+}) =>
+  enabled ? (
+    <GestureDetector gesture={gesture}>{children}</GestureDetector>
+  ) : (
+    children
+  );
+
 export type HeaderSubtitleInfo = {
   /** The selected date (yyyy-MM-dd) */
   date: string;
@@ -99,6 +115,10 @@ export interface ExpandableCalendarProps extends CalendarListProps {
   onCalendarToggled?: (isOpen: boolean) => void;
   /** an option to disable the pan gesture and disable the opening and closing of the calendar (initialPosition will persist)*/
   disablePan?: boolean;
+  /** drive open/close with a react-native-gesture-handler Pan instead of the JS PanResponder.
+   * Activation runs on the UI thread, so the pan can win against native interceptors such as
+   * Android's SwipeRefreshLayout (pull-to-refresh). Requires a GestureHandlerRootView ancestor. */
+  nativePanGesture?: boolean;
   /** whether to hide the knob  */
   hideKnob?: boolean;
   /** source for the left arrow image */
@@ -174,6 +194,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
     initialPosition = Positions.CLOSED,
     onCalendarToggled,
     disablePan,
+    nativePanGesture = false,
     hideKnob = numberOfDays && numberOfDays > 1,
     leftArrowImageSource = LEFT_ARROW,
     rightArrowImageSource = RIGHT_ARROW,
@@ -562,6 +583,30 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
           })
         : PanResponder.create({}),
     [numberOfDays, disablePan, horizontal, isOpen]
+  );
+
+  // Mirrors handleMoveShouldSetPanResponder, but declaratively so activation happens natively.
+  const nativePan = useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .enabled(
+          Boolean(nativePanGesture) &&
+            numberOfDaysCondition &&
+            !disablePan &&
+            !isDragging &&
+            (horizontal || !isOpen)
+        )
+        // Closed: only a downward drag opens. Open: either direction.
+        .activeOffsetY(isOpen ? [-5, 5] : 5)
+        .onUpdate((e) =>
+          handlePanResponderMove(
+            undefined as unknown as GestureResponderEvent,
+            { dy: e.translationY } as PanResponderGestureState
+          )
+        )
+        .onEnd(() => handlePanResponderEnd()),
+    [nativePanGesture, numberOfDaysCondition, disablePan, isDragging, horizontal, isOpen]
   );
 
   /** Day drag & drop */
@@ -1228,10 +1273,14 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
           renderArrow={_renderArrow}
         />
       ) : (
+        <MaybeGestureDetector
+          enabled={Boolean(nativePanGesture)}
+          gesture={nativePan}
+        >
         <Animated.View
           ref={wrapper}
           style={wrapperStyle}
-          {...panResponder.panHandlers}
+          {...(nativePanGesture ? undefined : panResponder.panHandlers)}
         >
           {renderCalendarList()}
           {renderWeekCalendar()}
@@ -1254,6 +1303,7 @@ const ExpandableCalendar = (props: ExpandableCalendarProps) => {
             </>
           )}
         </Animated.View>
+        </MaybeGestureDetector>
       )}
     </View>
   );
