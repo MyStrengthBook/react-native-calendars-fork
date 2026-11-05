@@ -2,6 +2,24 @@
 
 # React Native Calendars 🗓️ 📆
 
+> ## MyStrengthBook fork
+>
+> This is MyStrengthBook's fork of [wix/react-native-calendars](https://github.com/wix/react-native-calendars), based on `release_1.1289.0` plus our own changes (day drag & drop, header subtitle / `compactHeader`, `nativePanGesture`, `textDayHeaderStyle`, …). msb-mobile installs it straight from a git tag and reads the TypeScript sources (`"main": "src/index.ts"`), so there's no build step.
+>
+> ### Branches
+>
+> - `master`: the release line. All work branches off it and merges back into it, and every release tag is cut from it.
+> - `upstream-master`: wix's `master` as of the last sync, kept for reference. Syncing with upstream is its own task.
+>
+> ### Release flow
+>
+> 1. Branch off `master`, make the change, open a PR into `master`.
+> 2. After merging, bump `version` in `package.json` on `master` in a commit named `chore(release): bump version to X.Y.Z`.
+> 3. Tag that commit `vX.Y.Z` (lightweight tag) and push the tag.
+> 4. In msb-mobile, point `react-native-calendars` at `github:MyStrengthBook/react-native-calendars-fork#vX.Y.Z` and run `yarn install`.
+>
+> **Never move, delete or re-push an existing `v…` tag.** Released app versions and older msb-mobile branches pin those tags through `yarn.lock`.
+
 [![Version](https://img.shields.io/npm/v/react-native-calendars.svg)](https://www.npmjs.com/package/react-native-calendars)
 [![Build Status](https://travis-ci.org/wix/react-native-calendars.svg?branch=master)](https://travis-ci.org/wix/react-native-calendars)
 
